@@ -4,6 +4,32 @@ const cities_json = require("./countries+states+cities.json")
 const  { ErrorResponse , SuccessResponse} = require('./helpers/responseService')
 var QRCode = require('qrcode');
 const sharp = require("sharp");
+const cors = require("cors")
+
+var http = require('http');
+var server = http.createServer(app);
+const morgan = require('morgan');
+
+
+// socket.io
+var io = require('socket.io')(server, {
+    maxHttpBufferSize: 1e8, // current value (100 MB)
+    cors: {
+      origin: '*',
+    },
+  });
+  
+
+
+// importan middlewares
+app.use(cors());
+app.use(express.static('/public'));
+app.use('/uploads', express.static(__dirname + '/uploads'));
+app.use(express.static(__dirname + '/public', { maxAge: '30 days' }));
+app.use(express.urlencoded({ limit: "50mb", extended: true, parameterLimit: 50000 }));
+app.use(express.json({ limit: "50mb", extended: true, parameterLimit: 50000 }));
+
+app.use(morgan('tiny'));
 
 
 
@@ -17,6 +43,67 @@ const ffprobe = require('ffprobe-static');
 // Set the paths for ffmpeg and ffprobe
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobe.path);
+
+
+
+
+
+
+
+
+
+
+
+
+//socket.io setup 
+io.on('connection', async (socket) => {
+    console.log("socket connection initiated ")
+    let userJoinId;
+  
+    // Handling user connection
+    if (socket.handshake.query.userid) {
+      userJoinId = socket.handshake.query.userid;
+      if (!connectedUser.includes(userJoinId)) {
+        connectedUser.push(userJoinId)
+      }
+      console.log({ connectedUser })
+  
+      try {
+        // const user = await User.findOne({ _id: userJoinId });
+  
+        // if (user) {
+        //   user.onlineStatus = true;
+        //   socket.join(userJoinId)
+        //   io.emit("user_online_status", connectedUser)
+        //   await user.save();
+        // }
+    }catch (err){
+        console.log(err)
+    }
+}
+
+
+socket.on('disconnect', async () => {
+    if (userJoinId) {
+      try {
+        const user = await User.findOne({ _id: userJoinId });
+
+        if (user) {
+          user.onlineStatus = false;
+          console.log("user disconnected")
+          await user.save();
+        }
+
+        connectedUser = connectedUser.filter(users => users !== userJoinId)
+        io.emit("user_online_status", connectedUser)
+        console.log({ connectedUser })
+      } catch (error) {
+        console.error(error);
+        socket.emit("error", error.message);
+      }
+    }
+  });
+})
 
 
 
@@ -166,6 +253,6 @@ function capitalizeFirstLetter(word) {
 
 
 
-app.listen(5000 , () =>{
+  server.listen(5000 , () =>{
     console.log('server is running')
 })
