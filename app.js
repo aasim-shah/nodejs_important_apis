@@ -1,5 +1,11 @@
 const express = require('express')
 const app = express()
+const cities_json = require("./countries+states+cities.json")
+const  { ErrorResponse , SuccessResponse} = require('./helpers/responseService')
+var QRCode = require('qrcode');
+const sharp = require("sharp");
+
+
 
 
 
@@ -68,6 +74,95 @@ app.get("/extract_screenshot_from_video", async (req, res) => {
     }
   });
 
+
+
+
+
+app.get("/generate_qr" , async(req,res)=>{
+
+     const qrStringData = await QRCode.toBuffer("some text")
+    console.log({ qrStringData })
+    const outputDirectory = './public/qr_codes/';
+    sharp(qrStringData)
+      .toFormat('webp', { quality: 80 })
+      .resize(300, 300)
+      .toFile(outputDirectory + "aasimshahh" + '_qrCode.webp', (err, info) => {
+        if (err) { console.error(err) }
+        if (info) { console.error(info) }
+      });
+        return SuccessResponse(res, "QRCode generate successfully")
+})
+
+
+
+
+
+/// all about geting counties-states-cities
+function capitalizeFirstLetter(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+  
+  app.get("/countries", async (req, res) => {
+    try {
+  
+      const countries = cities_json.map(item => item.name)
+      return SuccessResponse(res, countries)
+  
+    } catch (error) {
+      console.log({ error })
+      return ErrorResponse(res, error.messege)
+    }
+  })
+  
+  
+  app.get("/countries/:country", async (req, res) => {
+    try {
+      const country = capitalizeFirstLetter(req.params.country);
+      console.log({ country })
+      let countryInfo = cities_json.filter(item => {
+        if (item.name === country) {
+          return item.states
+        }
+      })
+      const states = countryInfo[0].states.map((item) => item?.name)
+  
+      return SuccessResponse(res, states)
+  
+    } catch (error) {
+      console.log({ error })
+      return ErrorResponse(res, error.messege)
+    }
+  })
+  
+  
+  
+  app.get("/countries/:country/:state", async (req, res) => {
+    try {
+      const countryName = capitalizeFirstLetter(req.params.country);
+      const stateName = capitalizeFirstLetter(req.params.state);
+  
+      let countryInfo = cities_json.filter(item => {
+        if (item.name === countryName) {
+          return item.states
+        }
+      })
+      const states = countryInfo[0].states
+  
+      let stateInfo = states.filter(item => {
+        if (item.name === stateName) {
+          return item.cities
+        }
+      })
+  
+      const cities = stateInfo[0].cities.map(item => item.name)
+      return SuccessResponse(res, cities)
+  
+    } catch (error) {
+      console.log({ error })
+      return ErrorResponse(res, error.messege)
+    }
+  })
+  /// all about geting counties-states-cities
 
 
 
