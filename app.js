@@ -44,6 +44,30 @@ app.get("/extract_screenshot_from_video", async (req, res) => {
   });
   
 
+  app.get('/pagination', async (req, res) => {
+    const page = parseInt(req.query.page) || 1; // Current page, default is 1
+    const pageSize = parseInt(req.query.pageSize) || 10; // Number of items per page, default is 10
+  
+    try {
+      const totalCount = await User.countDocuments();
+      const totalPages = Math.ceil(totalCount / pageSize);
+  
+      const data = await User.find()
+        .skip((page - 1) * pageSize)
+        .limit(pageSize);
+  
+      res.json({
+        data,
+        totalPages,
+        currentPage: page,
+        pageSize,
+        totalCount,
+      });
+    } catch (error) {
+        return ErrorResponse(res, error.message);
+    }
+  });
+
 
 
 
